@@ -251,10 +251,17 @@ func parse(rd io.Reader) (graph, toscalib.ToscaDefinition, error) {
 	//g.addEdges(node)
 	row, col := adjacencyMatrix.Dims()
 	for r := 1; r < row; r++ {
+		cs := []int{}
 		for c := 1; c < col; c++ {
 			if adjacencyMatrix.At(r, c) == 1 {
-				g.addEdges(r, c)
+				cs = append(cs, c)
+				//g.addEdges(r, c)
 			}
+		}
+		if len(cs) != 0 {
+			fmt.Println("DEBUG: ", cs)
+			g.addEdges(r, cs...)
+
 		}
 	}
 	return g, t, nil
