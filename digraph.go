@@ -247,24 +247,6 @@ func parse(rd io.Reader) (graph, error) {
 	if err != nil {
 		return nil, err
 	}
-	// a map containing the ID and the corresponding action
-	ids := make(map[int]string)
-	// Fill in the graph with the toscaTemplate via the adjacency matrix
-	for node, template := range toscaTemplate.TopologyTemplate.NodeTemplates {
-		// Find the edges of the current node and add them to the graph
-
-		ids[template.GetConfigureIndex()] = fmt.Sprintf("%v:Configure", node)
-		ids[template.GetCreateIndex()] = fmt.Sprintf("%v:Create", node)
-		ids[template.GetDeleteIndex()] = fmt.Sprintf("%v:Delete", node)
-		ids[template.GetInitialIndex()] = fmt.Sprintf("%v:Initial", node)
-		ids[template.GetPostConfigureSourceIndex()] = fmt.Sprintf("%v:PostConfigureSource", node)
-		ids[template.GetPostConfigureTargetIndex()] = fmt.Sprintf("%v:PostconfigureTarget", node)
-		ids[template.GetPreConfigureSourceIndex()] = fmt.Sprintf("%v:PreConfigureSource", node)
-		ids[template.GetPreConfigureTargetIndex()] = fmt.Sprintf("%v:PreConfigureTarget", node)
-		ids[template.GetStartIndex()] = fmt.Sprintf("%v:Start", node)
-		ids[template.GetStopIndex()] = fmt.Sprintf("%v:Stop", node)
-	}
-
 	adjacencyMatrix := toscaTemplate.AdjacencyMatrix
 	//g.addEdges(node)
 	row, col := adjacencyMatrix.Dims()
