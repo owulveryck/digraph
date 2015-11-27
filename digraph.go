@@ -259,7 +259,6 @@ func parse(rd io.Reader) (graph, toscalib.ToscaDefinition, error) {
 			}
 		}
 		if len(cs) != 0 {
-			fmt.Println("DEBUG: ", cs)
 			g.addEdges(r, cs...)
 
 		}
