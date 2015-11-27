@@ -239,15 +239,15 @@ func (g graph) sccs() []nodeset {
 	return sccs
 }
 
-func parse(rd io.Reader) (graph, error) {
+func parse(rd io.Reader) (graph, toscalib.ToscaDefinition, error) {
 	g := make(graph)
 	// Parse the input graph.
-	var toscaTemplate toscalib.ToscaDefinition
-	err := toscaTemplate.Parse(rd)
+	var t toscalib.ToscaDefinition
+	err := t.Parse(rd)
 	if err != nil {
-		return nil, err
+		return nil, t, err
 	}
-	adjacencyMatrix := toscaTemplate.AdjacencyMatrix
+	adjacencyMatrix := t.AdjacencyMatrix
 	//g.addEdges(node)
 	row, col := adjacencyMatrix.Dims()
 	for r := 1; r < row; r++ {
@@ -257,7 +257,7 @@ func parse(rd io.Reader) (graph, error) {
 			}
 		}
 	}
-	return g, nil
+	return g, t, nil
 }
 
 var stdin io.Reader = os.Stdin
@@ -265,7 +265,7 @@ var stdout io.Writer = os.Stdout
 
 func digraph(cmd string, args []int) error {
 	// Parse the input graph.
-	g, err := parse(stdin)
+	g, _, err := parse(stdin)
 	if err != nil {
 		return err
 	}
