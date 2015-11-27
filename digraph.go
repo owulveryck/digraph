@@ -1,4 +1,4 @@
-// The digraph command performs queries over unlabelled directed graphs
+// The digraph command performs queries over unidled directed graphs
 // represented in text form.  It is intended to integrate nicely with
 // typical UNIX command pipelines.
 //
@@ -60,21 +60,21 @@ Supported queries:
 	the set of all nodes
   degree
 	the in-degree and out-degree of each node.
-  preds <label> ...
+  preds <id> ...
 	the set of immediate predecessors of the specified nodes
-  succs <label> ...
+  succs <id> ...
 	the set of immediate successors of the specified nodes
-  forward <label> ...
+  forward <id> ...
 	the set of nodes transitively reachable from the specified nodes
-  reverse <label> ...
+  reverse <id> ...
 	the set of nodes that transitively reach the specified nodes
-  somepath <label> <label>
+  somepath <id> <id>
 	the list of nodes on some arbitrary path from the first node to the second
-  allpaths <label> <label>
+  allpaths <id> <id>
 	the set of nodes on all paths from the first node to the second
   sccs
 	all strongly connected components (one per line)
-  scc <label>
+  scc <id>
 	the set of nodes nodes strongly connected to the specified one
 
 Example usage:
@@ -97,56 +97,66 @@ func main() {
 		return
 	}
 
-	if err := digraph(args[0], args[1:]); err != nil {
+	var argsi = []int{}
+	for _, i := range args[1:] {
+		j, err := strconv.Atoi(i)
+		if err != nil {
+			panic(err)
+
+		}
+		argsi = append(argsi, j)
+
+	}
+	if err := digraph(args[0], argsi); err != nil {
 		fmt.Fprintf(os.Stderr, "digraph: %s\n", err)
 		os.Exit(1)
 	}
 }
 
-type nodelist []string
+type nodelist []int
 
 func (l nodelist) println(sep string) {
-	for i, label := range l {
+	for i, id := range l {
 		if i > 0 {
 			fmt.Fprint(stdout, sep)
 		}
-		fmt.Fprint(stdout, label)
+		fmt.Fprint(stdout, id)
 	}
 	fmt.Fprintln(stdout)
 }
 
-type nodeset map[string]bool
+type nodeset map[int]bool
 
 func (s nodeset) sort() nodelist {
-	labels := make(nodelist, len(s))
+	ids := make(nodelist, len(s))
 	var i int
-	for label := range s {
-		labels[i] = label
+	for id := range s {
+		ids[i] = id
 		i++
 	}
-	sort.Strings(labels)
-	return labels
+	sort.Ints(ids)
+	return ids
 }
 
 func (s nodeset) addAll(x nodeset) {
-	for label := range x {
-		s[label] = true
+	for id := range x {
+		s[id] = true
 	}
 }
 
 // A graph maps nodes to the non-nil set of their immediate successors.
-type graph map[string]nodeset
+type graph map[int]nodeset
 
-func (g graph) addNode(label string) nodeset {
-	edges := g[label]
+func (g graph) addNode(id int) nodeset {
+	edges := g[id]
 	if edges == nil {
 		edges = make(nodeset)
-		g[label] = edges
+		g[id] = edges
 	}
 	return edges
 }
 
-func (g graph) addEdges(from string, to ...string) {
+func (g graph) addEdges(from int, to ...int) {
 	edges := g.addNode(from)
 	for _, to := range to {
 		g.addNode(to)
@@ -156,11 +166,11 @@ func (g graph) addEdges(from string, to ...string) {
 
 func (g graph) reachableFrom(roots nodeset) nodeset {
 	seen := make(nodeset)
-	var visit func(label string)
-	visit = func(label string) {
-		if !seen[label] {
-			seen[label] = true
-			for e := range g[label] {
+	var visit func(id int)
+	visit = func(id int) {
+		if !seen[id] {
+			seen[id] = true
+			for e := range g[id] {
 				visit(e)
 			}
 		}
@@ -173,10 +183,10 @@ func (g graph) reachableFrom(roots nodeset) nodeset {
 
 func (g graph) transpose() graph {
 	rev := make(graph)
-	for label, edges := range g {
-		rev.addNode(label)
+	for id, edges := range g {
+		rev.addNode(id)
 		for succ := range edges {
-			rev.addEdges(succ, label)
+			rev.addEdges(succ, id)
 		}
 	}
 	return rev
@@ -188,30 +198,30 @@ func (g graph) sccs() []nodeset {
 	// Forward pass.
 	S := make(nodelist, 0, len(g)) // postorder stack
 	seen := make(nodeset)
-	var visit func(label string)
-	visit = func(label string) {
-		if !seen[label] {
-			seen[label] = true
-			for e := range g[label] {
+	var visit func(id int)
+	visit = func(id int) {
+		if !seen[id] {
+			seen[id] = true
+			for e := range g[id] {
 				visit(e)
 			}
-			S = append(S, label)
+			S = append(S, id)
 		}
 	}
-	for label := range g {
-		visit(label)
+	for id := range g {
+		visit(id)
 	}
 
 	// Reverse pass.
 	rev := g.transpose()
 	var scc nodeset
 	seen = make(nodeset)
-	var rvisit func(label string)
-	rvisit = func(label string) {
-		if !seen[label] {
-			seen[label] = true
-			scc[label] = true
-			for e := range rev[label] {
+	var rvisit func(id int)
+	rvisit = func(id int) {
+		if !seen[id] {
+			seen[id] = true
+			scc[id] = true
+			for e := range rev[id] {
 				rvisit(e)
 			}
 		}
@@ -261,7 +271,7 @@ func parse(rd io.Reader) (graph, error) {
 	for r := 1; r < row; r++ {
 		for c := 1; c < col; c++ {
 			if adjacencyMatrix.At(r, c) == 1 {
-				g.addEdges(ids[r], ids[c])
+				g.addEdges(r, c)
 			}
 		}
 	}
@@ -271,7 +281,7 @@ func parse(rd io.Reader) (graph, error) {
 var stdin io.Reader = os.Stdin
 var stdout io.Writer = os.Stdout
 
-func digraph(cmd string, args []string) error {
+func digraph(cmd string, args []int) error {
 	// Parse the input graph.
 	g, err := parse(stdin)
 	if err != nil {
@@ -285,8 +295,8 @@ func digraph(cmd string, args []string) error {
 			return fmt.Errorf("usage: digraph nodes")
 		}
 		nodes := make(nodeset)
-		for label := range g {
-			nodes[label] = true
+		for id := range g {
+			nodes[id] = true
 		}
 		nodes.sort().println("\n")
 
@@ -295,17 +305,17 @@ func digraph(cmd string, args []string) error {
 			return fmt.Errorf("usage: digraph degree")
 		}
 		nodes := make(nodeset)
-		for label := range g {
-			nodes[label] = true
+		for id := range g {
+			nodes[id] = true
 		}
 		rev := g.transpose()
-		for _, label := range nodes.sort() {
-			fmt.Fprintf(stdout, "%d\t%d\t%s\n", len(rev[label]), len(g[label]), label)
+		for _, id := range nodes.sort() {
+			fmt.Fprintf(stdout, "%d\t%d\t%s\n", len(rev[id]), len(g[id]), id)
 		}
 
 	case "succs", "preds":
 		if len(args) == 0 {
-			return fmt.Errorf("usage: digraph %s <label> ...", cmd)
+			return fmt.Errorf("usage: digraph %s <id> ...", cmd)
 		}
 		g := g
 		if cmd == "preds" {
@@ -323,7 +333,7 @@ func digraph(cmd string, args []string) error {
 
 	case "forward", "reverse":
 		if len(args) == 0 {
-			return fmt.Errorf("usage: digraph %s <label> ...", cmd)
+			return fmt.Errorf("usage: digraph %s <id> ...", cmd)
 		}
 		roots := make(nodeset)
 		for _, root := range args {
@@ -351,16 +361,16 @@ func digraph(cmd string, args []string) error {
 		}
 
 		seen := make(nodeset)
-		var visit func(path nodelist, label string) bool
-		visit = func(path nodelist, label string) bool {
-			if !seen[label] {
-				seen[label] = true
-				if label == to {
-					append(path, label).println("\n")
+		var visit func(path nodelist, id int) bool
+		visit = func(path nodelist, id int) bool {
+			if !seen[id] {
+				seen[id] = true
+				if id == to {
+					append(path, id).println("\n")
 					return true // unwind
 				}
-				for e := range g[label] {
-					if visit(append(path, label), e) {
+				for e := range g[id] {
+					if visit(append(path, id), e) {
 						return true
 					}
 				}
@@ -384,28 +394,28 @@ func digraph(cmd string, args []string) error {
 		}
 
 		seen := make(nodeset) // value of seen[x] indicates whether x is on some path to 'to'
-		var visit func(label string) bool
-		visit = func(label string) bool {
-			reachesTo, ok := seen[label]
+		var visit func(id int) bool
+		visit = func(id int) bool {
+			reachesTo, ok := seen[id]
 			if !ok {
-				reachesTo = label == to
+				reachesTo = id == to
 
-				seen[label] = reachesTo
-				for e := range g[label] {
+				seen[id] = reachesTo
+				for e := range g[id] {
 					if visit(e) {
 						reachesTo = true
 					}
 				}
-				seen[label] = reachesTo
+				seen[id] = reachesTo
 			}
 			return reachesTo
 		}
 		if !visit(from) {
 			return fmt.Errorf("no path from %q to %q", from, to)
 		}
-		for label, reachesTo := range seen {
+		for id, reachesTo := range seen {
 			if !reachesTo {
-				delete(seen, label)
+				delete(seen, id)
 			}
 		}
 		seen.sort().println("\n")
@@ -420,14 +430,14 @@ func digraph(cmd string, args []string) error {
 
 	case "scc":
 		if len(args) != 1 {
-			return fmt.Errorf("usage: digraph scc <label>")
+			return fmt.Errorf("usage: digraph scc <id>")
 		}
-		label := args[0]
-		if g[label] == nil {
-			return fmt.Errorf("no such node %q", label)
+		id := args[0]
+		if g[id] == nil {
+			return fmt.Errorf("no such node %q", id)
 		}
 		for _, scc := range g.sccs() {
-			if scc[label] {
+			if scc[id] {
 				scc.sort().println("\n")
 				break
 			}
