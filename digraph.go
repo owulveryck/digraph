@@ -248,19 +248,16 @@ func parse(rd io.Reader) (graph, toscalib.ToscaDefinition, error) {
 		return nil, t, err
 	}
 	adjacencyMatrix := t.AdjacencyMatrix
-	//g.addEdges(node)
 	row, col := adjacencyMatrix.Dims()
 	for r := 1; r < row; r++ {
 		cs := []int{}
 		for c := 1; c < col; c++ {
 			if adjacencyMatrix.At(r, c) == 1 {
 				cs = append(cs, c)
-				//g.addEdges(r, c)
 			}
 		}
 		if len(cs) != 0 {
 			g.addEdges(r, cs...)
-
 		}
 	}
 	return g, t, nil
@@ -271,7 +268,7 @@ var stdout io.Writer = os.Stdout
 
 func digraph(cmd string, args []int) error {
 	// Parse the input graph.
-	g, _, err := parse(stdin)
+	g, t, err := parse(stdin)
 	if err != nil {
 		return err
 	}
@@ -285,8 +282,8 @@ func digraph(cmd string, args []int) error {
 		nodes := make(nodeset)
 		for id := range g {
 			nodes[id] = true
+			fmt.Printf("%v\n", t.GetNodeTemplateFromId(id).Name)
 		}
-		nodes.sort().println("\n")
 
 	case "degree":
 		if len(args) != 0 {
